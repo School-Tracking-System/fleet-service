@@ -1,0 +1,21 @@
+# Binaries
+bin/
+api
+__debug_bin*
+
+# Env
+.env
+*.env
+!.env.template
+
+# IDEs
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Go
+vendor/
+*.out
+*.test

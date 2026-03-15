@@ -1,21 +1,30 @@
 package env
 
 import (
+	"log"
+
 	"github.com/caarlos0/env/v10"
+	"github.com/joho/godotenv"
 	"go.uber.org/fx"
 )
 
 type Config struct {
-	Port        string `env:"PORT" envDefault:"8080"`
+	ServiceName string `env:"SERVICE_NAME" envDefault:"fleet"`
+	HTTPPort    string `env:"HTTP_PORT" envDefault:"8081"`
+	GRPCPort    string `env:"GRPC_PORT" envDefault:"9090"`
+	DatabaseURL string `env:"DATABASE_URL" envDefault:"postgres://postgres:postgres@localhost:5432/school_tracking?sslmode=disable"`
 	Environment string `env:"ENVIRONMENT" envDefault:"development"`
+	LogLevel    string `env:"LOG_LEVEL" envDefault:"debug"`
 }
 
-func NewConfig() (*Config, error) {
-	cfg := &Config{}
-	if err := env.Parse(cfg); err != nil {
-		return nil, err
+func NewConfig() *Config {
+	_ = godotenv.Load()
+
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("failed to load environment variables: %v", err)
 	}
-	return cfg, nil
+	return &cfg
 }
 
-var Module = fx.Provide(NewConfig)
+var Module = fx.Module("env", fx.Provide(NewConfig))
