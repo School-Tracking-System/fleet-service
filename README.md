@@ -57,15 +57,20 @@ internal/
 │   ├── domain/
 │   │   └── models.go   # Entidades puras: Vehicle, Driver, Student, School
 │   ├── ports/
-│   │   ├── repositories/ # Interfaces de persistencia (VehicleRepository)
-│   │   └── services/     # Interfaces de lógica de negocio (VehicleService)
+│   │   ├── repositories/ # Interfaces de persistencia (VehicleRepository, ...)
+│   │   └── services/     # Interfaces de lógica de negocio (VehicleService, ...)
 │   └── fleet/
 │       └── service.go   # Implementación de la lógica de negocio
 └── infrastructure/
-    ├── grpc/
-    │   ├── server.go    # Arranque del servidor gRPC
-    │   └── handlers/
-    │       └── vehicle_handler.go # Mapeo: Proto Request → Domain → Proto Response
+    ├── grpc/              # Adaptador gRPC (capa de transporte)
+    │   ├── server.go      # Arranque del servidor gRPC
+    │   └── handlers/      # Mapeo: Proto Request → Domain → Proto Response
+    │       ├── vehicle_handler.go
+    │       ├── driver_handler.go
+    │       ├── school_handler.go
+    │       ├── student_handler.go
+    │       ├── guardian_handler.go
+    │       └── route_handler.go
     └── persistence/
         └── postgres/
             └── vehicle_repo.go # Implementación SQL del VehicleRepository
@@ -83,6 +88,8 @@ proto/                  # (raíz del monorepo)
     └── v1/
         └── vehicle.proto # Contrato gRPC — Fuente de verdad
 ```
+
+> **Convención de transporte:** Este servicio expone únicamente gRPC, por eso la carpeta de transporte se llama `infrastructure/grpc/`. Los servicios HTTP REST usan `infrastructure/api/` en su lugar. Ver `docs/plans/backend/00-backend-overview.md §2`.
 
 ---
 

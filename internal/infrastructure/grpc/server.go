@@ -17,6 +17,11 @@ func NewGRPCServer(
 	cfg *env.Config,
 	log *zap.Logger,
 	vehicleHandler pb.VehicleServiceServer,
+	routeHandler pb.RouteServiceServer,
+	driverHandler pb.DriverServiceServer,
+	studentHandler pb.StudentServiceServer,
+	guardianHandler pb.GuardianServiceServer,
+	schoolHandler pb.SchoolServiceServer,
 ) *grpc.Server {
 
 	// In a real approach, you can inject interceptors here (logging, recovery, auth validation)
@@ -24,6 +29,11 @@ func NewGRPCServer(
 
 	// Register handlers
 	pb.RegisterVehicleServiceServer(grpcServer, vehicleHandler)
+	pb.RegisterRouteServiceServer(grpcServer, routeHandler)
+	pb.RegisterDriverServiceServer(grpcServer, driverHandler)
+	pb.RegisterStudentServiceServer(grpcServer, studentHandler)
+	pb.RegisterGuardianServiceServer(grpcServer, guardianHandler)
+	pb.RegisterSchoolServiceServer(grpcServer, schoolHandler)
 
 	// Enable reflection for tools like grpcurl/evans
 	reflection.Register(grpcServer)

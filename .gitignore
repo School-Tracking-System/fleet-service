@@ -1,6 +1,6 @@
 # Binaries
 bin/
-api
+/api
 __debug_bin*
 
 # Env

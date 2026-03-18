@@ -17,6 +17,11 @@ func (m *MockVehicleRepository) Create(ctx context.Context, v *domain.Vehicle) e
 	return args.Error(0)
 }
 
+func (m *MockVehicleRepository) Update(ctx context.Context, v *domain.Vehicle) error {
+	args := m.Called(ctx, v)
+	return args.Error(0)
+}
+
 func (m *MockVehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Vehicle, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {

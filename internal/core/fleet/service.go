@@ -29,18 +29,18 @@ func NewVehicleService(repo repositories.VehicleRepository, log *zap.Logger) ser
 func (s *vehicleService) CreateVehicle(ctx context.Context, req services.CreateVehicleRequest) (*domain.Vehicle, error) {
 	s.log.Info("Creating new vehicle", zap.String("plate", req.Plate))
 
-	// Validate minimal business rules at the application layer constraints if needed
-	if strings.TrimSpace(req.Plate) == "" {
-		return nil, fmt.Errorf("plate is required")
-	}
-
-	vehicle, err := domain.NewVehicle(
-		strings.ToUpper(req.Plate),
-		req.Brand,
-		req.Model,
-		req.Year,
-		req.Capacity,
-	)
+	vehicle, err := domain.NewVehicle(domain.NewVehicleParams{
+		Plate:         strings.ToUpper(strings.TrimSpace(req.Plate)),
+		Brand:         req.Brand,
+		Model:         req.Model,
+		Year:          req.Year,
+		Capacity:      req.Capacity,
+		Color:         req.Color,
+		VehicleType:   req.VehicleType,
+		ChassisNum:    req.ChassisNum,
+		InsuranceExp:  req.InsuranceExp,
+		TechReviewExp: req.TechReviewExp,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("invalid vehicle data: %w", err)
 	}
@@ -54,6 +54,25 @@ func (s *vehicleService) CreateVehicle(ctx context.Context, req services.CreateV
 	return vehicle, nil
 }
 
+func (s *vehicleService) UpdateVehicle(ctx context.Context, req services.UpdateVehicleRequest) (*domain.Vehicle, error) {
+	s.log.Info("Updating vehicle", zap.String("id", req.ID.String()))
+
+	vehicle, err := s.repo.GetByID(ctx, req.ID)
+	if err != nil {
+		return nil, fmt.Errorf("vehicle not found: %w", err)
+	}
+
+	vehicle.Apply(toPatch(req))
+
+	if err := s.repo.Update(ctx, vehicle); err != nil {
+		s.log.Error("Failed to update vehicle", zap.Error(err))
+		return nil, fmt.Errorf("failed to update vehicle in repository: %w", err)
+	}
+
+	s.log.Info("Vehicle successfully updated", zap.String("id", vehicle.ID.String()))
+	return vehicle, nil
+}
+
 func (s *vehicleService) GetVehicle(ctx context.Context, id uuid.UUID) (*domain.Vehicle, error) {
 	return s.repo.GetByID(ctx, id)
 }
@@ -63,6 +82,52 @@ func (s *vehicleService) ListVehicles(ctx context.Context, limit, offset int) ([
 		limit = 10
 	}
 	return s.repo.List(ctx, limit, offset)
+}
+
+// toPatch maps an UpdateVehicleRequest to a domain VehiclePatch.
+// It uses helper functions to convert zero-values to nil, so Apply only
+// touches the fields the caller explicitly provided.
+func toPatch(req services.UpdateVehicleRequest) domain.VehiclePatch {
+	return domain.VehiclePatch{
+		Brand:         nonEmptyStr(req.Brand),
+		Model:         nonEmptyStr(req.Model),
+		Year:          nonZeroInt(req.Year),
+		Capacity:      nonZeroInt(req.Capacity),
+		Status:        nonEmptyStatus(req.Status),
+		Color:         nonEmptyStr(req.Color),
+		VehicleType:   nonEmptyType(req.VehicleType),
+		ChassisNum:    nonEmptyStr(req.ChassisNum),
+		InsuranceExp:  req.InsuranceExp,
+		TechReviewExp: req.TechReviewExp,
+	}
+}
+
+func nonEmptyStr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func nonZeroInt(n int) *int {
+	if n == 0 {
+		return nil
+	}
+	return &n
+}
+
+func nonEmptyStatus(s domain.VehicleStatus) *domain.VehicleStatus {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func nonEmptyType(t domain.VehicleType) *domain.VehicleType {
+	if t == "" {
+		return nil
+	}
+	return &t
 }
 
 // Module provides the fleet core service to fx graph.

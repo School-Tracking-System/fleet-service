@@ -16,9 +16,21 @@ func AppModule() fx.Option {
 		env.Module,
 		logger.Module,
 		postgres.Module,
+		// Services
 		fleet.Module,
+		fleet.RouteModule,
+		fleet.DriverModule,
+		fleet.StudentModule,
+		fleet.GuardianModule,
+		fleet.SchoolModule,
+		// Handlers
 		handlers.Module,
-		internalGrpc.Module, // Provides the gRPC server
+		handlers.RouteHandlerModule,
+		handlers.DriverHandlerModule,
+		handlers.StudentHandlerModule,
+		handlers.GuardianHandlerModule,
+		handlers.SchoolHandlerModule,
+		internalGrpc.Module,              // Provides the gRPC server
 		fx.Invoke(func(*grpc.Server) {}), // Forces fx to instantiate and start it
 	)
 }

@@ -21,6 +21,14 @@ func (m *MockVehicleService) CreateVehicle(ctx context.Context, req services.Cre
 	return args.Get(0).(*domain.Vehicle), args.Error(1)
 }
 
+func (m *MockVehicleService) UpdateVehicle(ctx context.Context, req services.UpdateVehicleRequest) (*domain.Vehicle, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Vehicle), args.Error(1)
+}
+
 func (m *MockVehicleService) GetVehicle(ctx context.Context, id uuid.UUID) (*domain.Vehicle, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {

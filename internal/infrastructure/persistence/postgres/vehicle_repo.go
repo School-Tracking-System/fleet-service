@@ -50,14 +50,15 @@ func NewVehicleRepository(db *sql.DB, log *zap.Logger) repositories.VehicleRepos
 
 func (r *vehicleRepo) Create(ctx context.Context, v *domain.Vehicle) error {
 	query := `
-		INSERT INTO vehicles (id, plate, brand, model, year, capacity, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO vehicles (id, plate, brand, model, year, capacity, status, color, vehicle_type, chassis_num, insurance_exp, tech_review_exp, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		v.ID, v.Plate, v.Brand, v.Model, v.Year, v.Capacity, v.Status, v.CreatedAt, v.UpdatedAt,
+		v.ID, v.Plate, v.Brand, v.Model, v.Year, v.Capacity, v.Status,
+		nullableString(v.Color), nullableString(string(v.VehicleType)), nullableString(v.ChassisNum),
+		v.InsuranceExp, v.TechReviewExp, v.CreatedAt, v.UpdatedAt,
 	)
 	if err != nil {
-		// Detect duplicate plate error (driver: postgres, constraint: vehicles_plate_key)
 		if strings.Contains(err.Error(), "23505") || strings.Contains(err.Error(), "unique constraint") {
 			return domain.ErrDuplicateVehicle
 		}
@@ -66,20 +67,64 @@ func (r *vehicleRepo) Create(ctx context.Context, v *domain.Vehicle) error {
 	return nil
 }
 
+func (r *vehicleRepo) Update(ctx context.Context, v *domain.Vehicle) error {
+	query := `
+		UPDATE vehicles
+		SET brand = $1, model = $2, year = $3, capacity = $4, status = $5,
+		    color = $6, vehicle_type = $7, chassis_num = $8,
+		    insurance_exp = $9, tech_review_exp = $10, updated_at = NOW()
+		WHERE id = $11
+	`
+	result, err := r.db.ExecContext(ctx, query,
+		v.Brand, v.Model, v.Year, v.Capacity, v.Status,
+		nullableString(v.Color), nullableString(string(v.VehicleType)), nullableString(v.ChassisNum),
+		v.InsuranceExp, v.TechReviewExp, v.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update vehicle: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+	if rows == 0 {
+		return domain.ErrVehicleNotFound
+	}
+	return nil
+}
+
 func (r *vehicleRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Vehicle, error) {
 	query := `
-		SELECT id, plate, brand, model, year, capacity, status, created_at, updated_at
+		SELECT id, plate, brand, model, year, capacity, status, color, vehicle_type, chassis_num, insurance_exp, tech_review_exp, created_at, updated_at
 		FROM vehicles
 		WHERE id = $1
 	`
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var v domain.Vehicle
-	if err := row.Scan(&v.ID, &v.Plate, &v.Brand, &v.Model, &v.Year, &v.Capacity, &v.Status, &v.CreatedAt, &v.UpdatedAt); err != nil {
+	var color, vehicleType, chassisNum sql.NullString
+	var insuranceExp, techReviewExp sql.NullTime
+	if err := row.Scan(
+		&v.ID, &v.Plate, &v.Brand, &v.Model, &v.Year, &v.Capacity, &v.Status,
+		&color, &vehicleType, &chassisNum, &insuranceExp, &techReviewExp,
+		&v.CreatedAt, &v.UpdatedAt,
+	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrVehicleNotFound
 		}
 		return nil, fmt.Errorf("failed to scan vehicle row: %w", err)
+	}
+
+	v.Color = color.String
+	v.VehicleType = domain.VehicleType(vehicleType.String)
+	v.ChassisNum = chassisNum.String
+	if insuranceExp.Valid {
+		t := insuranceExp.Time
+		v.InsuranceExp = &t
+	}
+	if techReviewExp.Valid {
+		t := techReviewExp.Time
+		v.TechReviewExp = &t
 	}
 
 	return &v, nil
@@ -92,7 +137,7 @@ func (r *vehicleRepo) List(ctx context.Context, limit, offset int) ([]*domain.Ve
 	}
 
 	query := `
-		SELECT id, plate, brand, model, year, capacity, status, created_at, updated_at
+		SELECT id, plate, brand, model, year, capacity, status, color, vehicle_type, chassis_num, insurance_exp, tech_review_exp, created_at, updated_at
 		FROM vehicles
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -106,8 +151,25 @@ func (r *vehicleRepo) List(ctx context.Context, limit, offset int) ([]*domain.Ve
 	var vehicles []*domain.Vehicle
 	for rows.Next() {
 		var v domain.Vehicle
-		if err := rows.Scan(&v.ID, &v.Plate, &v.Brand, &v.Model, &v.Year, &v.Capacity, &v.Status, &v.CreatedAt, &v.UpdatedAt); err != nil {
+		var color, vehicleType, chassisNum sql.NullString
+		var insuranceExp, techReviewExp sql.NullTime
+		if err := rows.Scan(
+			&v.ID, &v.Plate, &v.Brand, &v.Model, &v.Year, &v.Capacity, &v.Status,
+			&color, &vehicleType, &chassisNum, &insuranceExp, &techReviewExp,
+			&v.CreatedAt, &v.UpdatedAt,
+		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan vehicle row: %w", err)
+		}
+		v.Color = color.String
+		v.VehicleType = domain.VehicleType(vehicleType.String)
+		v.ChassisNum = chassisNum.String
+		if insuranceExp.Valid {
+			t := insuranceExp.Time
+			v.InsuranceExp = &t
+		}
+		if techReviewExp.Valid {
+			t := techReviewExp.Time
+			v.TechReviewExp = &t
 		}
 		vehicles = append(vehicles, &v)
 	}
@@ -115,8 +177,21 @@ func (r *vehicleRepo) List(ctx context.Context, limit, offset int) ([]*domain.Ve
 	return vehicles, total, nil
 }
 
+// nullableString converts an empty string to a nil value for optional DB columns.
+func nullableString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
 // Module provides the PostgreSQL infrastructure dependencies to the application graph.
 var Module = fx.Options(
 	fx.Provide(NewDatabase),
 	fx.Provide(NewVehicleRepository),
+	fx.Provide(NewRouteRepository),
+	fx.Provide(NewDriverRepository),
+	fx.Provide(NewStudentRepository),
+	fx.Provide(NewGuardianRepository),
+	fx.Provide(NewSchoolRepository),
 )
