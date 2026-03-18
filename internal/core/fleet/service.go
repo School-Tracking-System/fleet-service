@@ -2,27 +2,32 @@ package fleet
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/fercho/school-tracking/services/fleet/internal/core/domain"
 	"github.com/fercho/school-tracking/services/fleet/internal/core/ports/repositories"
+	"github.com/fercho/school-tracking/services/fleet/internal/core/ports/resources"
 	"github.com/fercho/school-tracking/services/fleet/internal/core/ports/services"
+	"github.com/fercho/school-tracking/services/fleet/internal/infrastructure/messaging/nats"
 	"github.com/google/uuid"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 type vehicleService struct {
-	repo repositories.VehicleRepository
-	log  *zap.Logger
+	repo      repositories.VehicleRepository
+	publisher resources.EventPublisher
+	log       *zap.Logger
 }
 
 // NewVehicleService creates a new business logic service for vehicles.
-func NewVehicleService(repo repositories.VehicleRepository, log *zap.Logger) services.VehicleService {
+func NewVehicleService(repo repositories.VehicleRepository, publisher resources.EventPublisher, log *zap.Logger) services.VehicleService {
 	return &vehicleService{
-		repo: repo,
-		log:  log,
+		repo:      repo,
+		publisher: publisher,
+		log:       log,
 	}
 }
 
@@ -51,6 +56,21 @@ func (s *vehicleService) CreateVehicle(ctx context.Context, req services.CreateV
 	}
 
 	s.log.Info("Vehicle successfully created", zap.String("id", vehicle.ID.String()))
+
+	event := domain.VehicleCreatedEvent{
+		ID:        vehicle.ID.String(),
+		Plate:     vehicle.Plate,
+		Brand:     vehicle.Brand,
+		Model:     vehicle.Model,
+		Status:    string(vehicle.Status),
+		CreatedAt: vehicle.CreatedAt,
+	}
+	if payload, err := json.Marshal(event); err == nil {
+		if err := s.publisher.Publish(ctx, nats.SubjectVehicleCreated, payload); err != nil {
+			s.log.Warn("Failed to publish vehicle.created event", zap.Error(err))
+		}
+	}
+
 	return vehicle, nil
 }
 
@@ -70,6 +90,21 @@ func (s *vehicleService) UpdateVehicle(ctx context.Context, req services.UpdateV
 	}
 
 	s.log.Info("Vehicle successfully updated", zap.String("id", vehicle.ID.String()))
+
+	event := domain.VehicleUpdatedEvent{
+		ID:        vehicle.ID.String(),
+		Plate:     vehicle.Plate,
+		Brand:     vehicle.Brand,
+		Model:     vehicle.Model,
+		Status:    string(vehicle.Status),
+		UpdatedAt: vehicle.UpdatedAt,
+	}
+	if payload, err := json.Marshal(event); err == nil {
+		if err := s.publisher.Publish(ctx, nats.SubjectVehicleUpdated, payload); err != nil {
+			s.log.Warn("Failed to publish vehicle.updated event", zap.Error(err))
+		}
+	}
+
 	return vehicle, nil
 }
 

@@ -15,13 +15,20 @@ import (
 	"go.uber.org/zap"
 )
 
+// nopPublisher returns a MockEventPublisher that succeeds silently on every Publish call.
+func nopPublisher() *mocks.MockEventPublisher {
+	p := new(mocks.MockEventPublisher)
+	p.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	return p
+}
+
 func TestCreateVehicle(t *testing.T) {
 	ctx := context.Background()
 	log := zap.NewNop()
 
 	t.Run("success with minimal fields", func(t *testing.T) {
 		repo := new(mocks.MockVehicleRepository)
-		svc := NewVehicleService(repo, log)
+		svc := NewVehicleService(repo, nopPublisher(), log)
 
 		req := services.CreateVehicleRequest{
 			Plate:    "ABC-1234",
@@ -45,7 +52,7 @@ func TestCreateVehicle(t *testing.T) {
 
 	t.Run("success with all extended fields", func(t *testing.T) {
 		repo := new(mocks.MockVehicleRepository)
-		svc := NewVehicleService(repo, log)
+		svc := NewVehicleService(repo, nopPublisher(), log)
 
 		insExp := time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
 		req := services.CreateVehicleRequest{
@@ -75,7 +82,7 @@ func TestCreateVehicle(t *testing.T) {
 
 	t.Run("plate is normalized to uppercase", func(t *testing.T) {
 		repo := new(mocks.MockVehicleRepository)
-		svc := NewVehicleService(repo, log)
+		svc := NewVehicleService(repo, nopPublisher(), log)
 
 		req := services.CreateVehicleRequest{
 			Plate:    "abc-1234",
@@ -96,7 +103,7 @@ func TestCreateVehicle(t *testing.T) {
 
 	t.Run("empty plate fails domain validation", func(t *testing.T) {
 		repo := new(mocks.MockVehicleRepository)
-		svc := NewVehicleService(repo, log)
+		svc := NewVehicleService(repo, nopPublisher(), log)
 
 		_, err := svc.CreateVehicle(ctx, services.CreateVehicleRequest{Plate: ""})
 
@@ -106,7 +113,7 @@ func TestCreateVehicle(t *testing.T) {
 
 	t.Run("repo error is propagated", func(t *testing.T) {
 		repo := new(mocks.MockVehicleRepository)
-		svc := NewVehicleService(repo, log)
+		svc := NewVehicleService(repo, nopPublisher(), log)
 
 		req := services.CreateVehicleRequest{Plate: "ERR-001", Year: 2022, Capacity: 10}
 		repo.On("Create", ctx, mock.Anything).Return(errors.New("db error"))
@@ -125,7 +132,7 @@ func TestUpdateVehicle(t *testing.T) {
 
 	t.Run("success partial update", func(t *testing.T) {
 		repo := new(mocks.MockVehicleRepository)
-		svc := NewVehicleService(repo, log)
+		svc := NewVehicleService(repo, nopPublisher(), log)
 
 		existing := &domain.Vehicle{ID: id, Plate: "OLD-001", Brand: "Toyota", Year: 2020, Capacity: 10, Status: domain.VehicleStatusActive}
 		repo.On("GetByID", ctx, id).Return(existing, nil)
@@ -147,7 +154,7 @@ func TestUpdateVehicle(t *testing.T) {
 
 	t.Run("vehicle not found", func(t *testing.T) {
 		repo := new(mocks.MockVehicleRepository)
-		svc := NewVehicleService(repo, log)
+		svc := NewVehicleService(repo, nopPublisher(), log)
 
 		repo.On("GetByID", ctx, id).Return(nil, domain.ErrVehicleNotFound)
 
@@ -165,7 +172,7 @@ func TestGetVehicle(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		repo := new(mocks.MockVehicleRepository)
-		svc := NewVehicleService(repo, log)
+		svc := NewVehicleService(repo, nopPublisher(), log)
 
 		expected := &domain.Vehicle{ID: id, Plate: "XYZ-789"}
 		repo.On("GetByID", ctx, id).Return(expected, nil)
@@ -178,7 +185,7 @@ func TestGetVehicle(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		repo := new(mocks.MockVehicleRepository)
-		svc := NewVehicleService(repo, log)
+		svc := NewVehicleService(repo, nopPublisher(), log)
 
 		repo.On("GetByID", ctx, id).Return(nil, errors.New("not found"))
 

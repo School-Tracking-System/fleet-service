@@ -4,6 +4,7 @@ import (
 	"github.com/fercho/school-tracking/services/fleet/internal/core/fleet"
 	internalGrpc "github.com/fercho/school-tracking/services/fleet/internal/infrastructure/grpc"
 	"github.com/fercho/school-tracking/services/fleet/internal/infrastructure/grpc/handlers"
+	messaging "github.com/fercho/school-tracking/services/fleet/internal/infrastructure/messaging/nats"
 	"github.com/fercho/school-tracking/services/fleet/internal/infrastructure/persistence/postgres"
 	"github.com/fercho/school-tracking/services/fleet/pkg/env"
 	"github.com/fercho/school-tracking/services/fleet/pkg/logger"
@@ -16,6 +17,7 @@ func AppModule() fx.Option {
 		env.Module,
 		logger.Module,
 		postgres.Module,
+		messaging.Module,
 		// Services
 		fleet.Module,
 		fleet.RouteModule,

@@ -13,6 +13,7 @@ type Config struct {
 	HTTPPort    string `env:"HTTP_PORT" envDefault:"8081"`
 	GRPCPort    string `env:"GRPC_PORT" envDefault:"9090"`
 	DatabaseURL string `env:"DATABASE_URL" envDefault:"postgres://postgres:postgres@localhost:5432/school_tracking?sslmode=disable"`
+	NatsURL     string `env:"NATS_URL" envDefault:"nats://localhost:4222"`
 	Environment string `env:"ENVIRONMENT" envDefault:"development"`
 	LogLevel    string `env:"LOG_LEVEL" envDefault:"debug"`
 }
