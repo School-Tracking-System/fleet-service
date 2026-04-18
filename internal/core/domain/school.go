@@ -87,10 +87,35 @@ func (s *School) Apply(patch SchoolPatch) {
 
 // SchoolContact represents a staff member at a school.
 type SchoolContact struct {
-	ID       uuid.UUID
-	SchoolID uuid.UUID
-	UserID   uuid.UUID // Logical FK → Auth service user
-	Position string
-	IsActive bool
+	ID        uuid.UUID
+	SchoolID  uuid.UUID
+	UserID    uuid.UUID // Logical FK → Auth service user
+	Position  string
+	IsActive  bool
 	CreatedAt time.Time
+}
+
+// NewSchoolContactParams holds the data required to add a contact to a school.
+type NewSchoolContactParams struct {
+	SchoolID uuid.UUID
+	UserID   uuid.UUID
+	Position string
+}
+
+// NewSchoolContact creates a valid SchoolContact enforcing business invariants.
+func NewSchoolContact(p NewSchoolContactParams) (*SchoolContact, error) {
+	if p.SchoolID == uuid.Nil {
+		return nil, errors.New("school_id is required")
+	}
+	if p.UserID == uuid.Nil {
+		return nil, errors.New("user_id is required")
+	}
+	return &SchoolContact{
+		ID:        uuid.New(),
+		SchoolID:  p.SchoolID,
+		UserID:    p.UserID,
+		Position:  p.Position,
+		IsActive:  true,
+		CreatedAt: time.Now().UTC(),
+	}, nil
 }

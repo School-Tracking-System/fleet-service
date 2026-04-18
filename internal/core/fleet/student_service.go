@@ -2,24 +2,28 @@ package fleet
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/fercho/school-tracking/services/fleet/internal/core/domain"
 	"github.com/fercho/school-tracking/services/fleet/internal/core/ports/repositories"
+	"github.com/fercho/school-tracking/services/fleet/internal/core/ports/resources"
 	"github.com/fercho/school-tracking/services/fleet/internal/core/ports/services"
+	"github.com/fercho/school-tracking/services/fleet/internal/infrastructure/messaging/nats"
 	"github.com/google/uuid"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 type studentService struct {
-	repo repositories.StudentRepository
-	log  *zap.Logger
+	repo      repositories.StudentRepository
+	publisher resources.EventPublisher
+	log       *zap.Logger
 }
 
 // NewStudentService creates a new business logic service for students.
-func NewStudentService(repo repositories.StudentRepository, log *zap.Logger) services.StudentService {
-	return &studentService{repo: repo, log: log}
+func NewStudentService(repo repositories.StudentRepository, publisher resources.EventPublisher, log *zap.Logger) services.StudentService {
+	return &studentService{repo: repo, publisher: publisher, log: log}
 }
 
 func (s *studentService) RegisterStudent(ctx context.Context, req services.RegisterStudentRequest) (*domain.Student, error) {
@@ -33,6 +37,7 @@ func (s *studentService) RegisterStudent(ctx context.Context, req services.Regis
 		PickupLocation: req.PickupLocation,
 		PickupAddress:  req.PickupAddress,
 		PhotoURL:       req.PhotoURL,
+		CedulaID:       req.CedulaID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("invalid student data: %w", err)
@@ -44,6 +49,20 @@ func (s *studentService) RegisterStudent(ctx context.Context, req services.Regis
 	}
 
 	s.log.Info("Student registered", zap.String("id", student.ID.String()))
+
+	event := domain.StudentAssignedEvent{
+		StudentID: student.ID.String(),
+		SchoolID:  student.SchoolID.String(),
+		FirstName: student.FirstName,
+		LastName:  student.LastName,
+		CreatedAt: student.CreatedAt,
+	}
+	if payload, err := json.Marshal(event); err == nil {
+		if err := s.publisher.Publish(ctx, nats.SubjectStudentAssigned, payload); err != nil {
+			s.log.Warn("Failed to publish student.assigned event", zap.Error(err))
+		}
+	}
+
 	return student, nil
 }
 
@@ -110,6 +129,7 @@ func toStudentPatch(req services.UpdateStudentRequest) domain.StudentPatch {
 		PickupLocation: req.PickupLocation,
 		PickupAddress:  nonEmptyStr(req.PickupAddress),
 		PhotoURL:       nonEmptyStr(req.PhotoURL),
+		CedulaID:       nonEmptyStr(req.CedulaID),
 	}
 }
 

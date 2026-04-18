@@ -21,3 +21,12 @@ type VehicleUpdatedEvent struct {
 	Status    string    `json:"status"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// StudentAssignedEvent is published after a student is registered and assigned to a school.
+type StudentAssignedEvent struct {
+	StudentID string    `json:"student_id"`
+	SchoolID  string    `json:"school_id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	CreatedAt time.Time `json:"created_at"`
+}

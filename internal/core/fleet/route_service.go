@@ -58,7 +58,7 @@ func (s *routeService) UpdateRoute(ctx context.Context, req services.UpdateRoute
 		Description:  nonEmptyStr(req.Description),
 		VehicleID:    req.VehicleID,
 		DriverID:     req.DriverID,
-		Direction:    &req.Direction,
+		Direction:    nonEmptyDirection(req.Direction),
 		ScheduleTime: nonEmptyStr(req.ScheduleTime),
 		IsActive:     req.IsActive,
 	})
@@ -122,6 +122,13 @@ func (s *routeService) GetStop(ctx context.Context, stopID uuid.UUID) (*domain.R
 
 func (s *routeService) GetRouteStops(ctx context.Context, routeID uuid.UUID) ([]*domain.RouteStop, error) {
 	return s.repo.GetStopsByRouteID(ctx, routeID)
+}
+
+func nonEmptyDirection(d domain.RouteDirection) *domain.RouteDirection {
+	if d == "" {
+		return nil
+	}
+	return &d
 }
 
 var RouteModule = fx.Provide(NewRouteService)

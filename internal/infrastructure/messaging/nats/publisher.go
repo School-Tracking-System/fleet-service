@@ -18,6 +18,9 @@ const SubjectVehicleCreated = "fleet.vehicle.created"
 // SubjectVehicleUpdated is the NATS subject for vehicle update events.
 const SubjectVehicleUpdated = "fleet.vehicle.updated"
 
+// SubjectStudentAssigned is the NATS subject published when a student is registered to a school.
+const SubjectStudentAssigned = "fleet.student.assigned"
+
 type publisher struct {
 	js nats.JetStreamContext
 }

@@ -17,15 +17,17 @@ import (
 
 type schoolHandler struct {
 	pb.UnimplementedSchoolServiceServer
-	service services.SchoolService
-	log     *zap.Logger
+	service        services.SchoolService
+	contactService services.SchoolContactService
+	log            *zap.Logger
 }
 
 // NewSchoolHandler creates a new gRPC handler for the SchoolService.
-func NewSchoolHandler(service services.SchoolService, log *zap.Logger) pb.SchoolServiceServer {
+func NewSchoolHandler(service services.SchoolService, contactService services.SchoolContactService, log *zap.Logger) pb.SchoolServiceServer {
 	return &schoolHandler{
-		service: service,
-		log:     log,
+		service:        service,
+		contactService: contactService,
+		log:            log,
 	}
 }
 
@@ -147,6 +149,88 @@ func (h *schoolHandler) mapError(err error) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	default:
 		h.log.Error("Unexpected school error", zap.Error(err))
+		return status.Errorf(codes.Internal, "an unexpected error occurred")
+	}
+}
+
+func (h *schoolHandler) AddContact(ctx context.Context, req *pb.AddContactRequest) (*pb.ContactResponse, error) {
+	schoolID, err := uuid.Parse(req.SchoolId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid school_id format")
+	}
+	userID, err := uuid.Parse(req.UserId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid user_id format")
+	}
+
+	contact, err := h.contactService.AddContact(ctx, services.AddContactRequest{
+		SchoolID: schoolID,
+		UserID:   userID,
+		Position: req.Position,
+	})
+	if err != nil {
+		return nil, h.mapContactError(err)
+	}
+
+	return &pb.ContactResponse{Contact: domainToProtoContact(contact)}, nil
+}
+
+func (h *schoolHandler) RemoveContact(ctx context.Context, req *pb.RemoveContactRequest) (*pb.RemoveContactResponse, error) {
+	id, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid contact ID format")
+	}
+
+	if err := h.contactService.RemoveContact(ctx, id); err != nil {
+		return nil, h.mapContactError(err)
+	}
+
+	return &pb.RemoveContactResponse{Success: true}, nil
+}
+
+func (h *schoolHandler) ListContacts(ctx context.Context, req *pb.ListContactsRequest) (*pb.ListContactsResponse, error) {
+	schoolID, err := uuid.Parse(req.SchoolId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid school_id format")
+	}
+
+	contacts, err := h.contactService.ListContacts(ctx, schoolID)
+	if err != nil {
+		return nil, h.mapContactError(err)
+	}
+
+	var pbContacts []*pb.SchoolContact
+	for _, c := range contacts {
+		pbContacts = append(pbContacts, domainToProtoContact(c))
+	}
+
+	return &pb.ListContactsResponse{Contacts: pbContacts}, nil
+}
+
+func domainToProtoContact(c *domain.SchoolContact) *pb.SchoolContact {
+	return &pb.SchoolContact{
+		Id:        c.ID.String(),
+		SchoolId:  c.SchoolID.String(),
+		UserId:    c.UserID.String(),
+		Position:  c.Position,
+		IsActive:  c.IsActive,
+		CreatedAt: timestamppb.New(c.CreatedAt),
+	}
+}
+
+func (h *schoolHandler) mapContactError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case errors.Is(err, domain.ErrContactNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, domain.ErrDuplicateContact):
+		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, domain.ErrInvalidContact):
+		return status.Error(codes.InvalidArgument, err.Error())
+	default:
+		h.log.Error("Unexpected contact error", zap.Error(err))
 		return status.Errorf(codes.Internal, "an unexpected error occurred")
 	}
 }

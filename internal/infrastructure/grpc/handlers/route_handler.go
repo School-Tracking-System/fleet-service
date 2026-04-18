@@ -153,6 +153,9 @@ func (h *routeHandler) AddStop(ctx context.Context, req *pb.AddStopRequest) (*pb
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid student_id")
 	}
+	if req.Location == nil {
+		return nil, status.Error(codes.InvalidArgument, "location is required")
+	}
 
 	stop, err := h.service.AddStop(ctx, services.AddStopRequest{
 		RouteID:   routeID,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-
 	"github.com/fercho/school-tracking/services/fleet/internal/core/domain"
 	"github.com/fercho/school-tracking/services/fleet/internal/core/ports/mocks"
 	"github.com/fercho/school-tracking/services/fleet/internal/core/ports/services"
@@ -28,12 +27,14 @@ func TestRegisterStudent(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		repo := new(mocks.MockStudentRepository)
-		svc := NewStudentService(repo, log)
+		pub := new(mocks.MockEventPublisher)
+		svc := NewStudentService(repo, pub, log)
 
 		req := validRegisterStudentReq()
 		repo.On("Create", ctx, mock.MatchedBy(func(s *domain.Student) bool {
 			return s.FirstName == req.FirstName && s.IsActive
 		})).Return(nil)
+		pub.On("Publish", ctx, mock.AnythingOfType("string"), mock.Anything).Return(nil)
 
 		student, err := svc.RegisterStudent(ctx, req)
 
@@ -44,7 +45,8 @@ func TestRegisterStudent(t *testing.T) {
 
 	t.Run("validation error", func(t *testing.T) {
 		repo := new(mocks.MockStudentRepository)
-		svc := NewStudentService(repo, log)
+		pub := new(mocks.MockEventPublisher)
+		svc := NewStudentService(repo, pub, log)
 
 		req := validRegisterStudentReq()
 		req.FirstName = ""
@@ -62,7 +64,8 @@ func TestUpdateStudent_Service(t *testing.T) {
 	id := uuid.New()
 
 	repo := new(mocks.MockStudentRepository)
-	svc := NewStudentService(repo, log)
+	pub := new(mocks.MockEventPublisher)
+	svc := NewStudentService(repo, pub, log)
 
 	existing := &domain.Student{ID: id, FirstName: "Old", LastName: "Name"}
 	repo.On("GetByID", ctx, id).Return(existing, nil)
@@ -85,7 +88,8 @@ func TestDeactivateStudent(t *testing.T) {
 	id := uuid.New()
 
 	repo := new(mocks.MockStudentRepository)
-	svc := NewStudentService(repo, log)
+	pub := new(mocks.MockEventPublisher)
+	svc := NewStudentService(repo, pub, log)
 
 	existing := &domain.Student{ID: id, IsActive: true}
 	repo.On("GetByID", ctx, id).Return(existing, nil)

@@ -26,6 +26,7 @@ type RegisterStudentRequest struct {
 	PickupLocation *domain.Location
 	PickupAddress  string
 	PhotoURL       string
+	CedulaID       string
 }
 
 // UpdateStudentRequest encapsulates the data for a partial student update.
@@ -37,4 +38,5 @@ type UpdateStudentRequest struct {
 	PickupLocation *domain.Location
 	PickupAddress  string
 	PhotoURL       string
+	CedulaID       string
 }

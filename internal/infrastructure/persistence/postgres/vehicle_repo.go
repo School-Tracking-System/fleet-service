@@ -194,4 +194,5 @@ var Module = fx.Options(
 	fx.Provide(NewStudentRepository),
 	fx.Provide(NewGuardianRepository),
 	fx.Provide(NewSchoolRepository),
+	fx.Provide(NewSchoolContactRepository),
 )

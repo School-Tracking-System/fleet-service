@@ -45,6 +45,7 @@ func (h *studentHandler) RegisterStudent(ctx context.Context, req *pb.RegisterSt
 		PickupLocation: protoToLocation(req.PickupLocation),
 		PickupAddress:  req.PickupAddress,
 		PhotoURL:       req.PhotoUrl,
+		CedulaID:       req.CedulaId,
 	})
 	if err != nil {
 		return nil, h.mapError(err)
@@ -69,6 +70,7 @@ func (h *studentHandler) UpdateStudent(ctx context.Context, req *pb.UpdateStuden
 		PickupLocation: protoToLocation(req.PickupLocation),
 		PickupAddress:  req.PickupAddress,
 		PhotoURL:       req.PhotoUrl,
+		CedulaID:       req.CedulaId,
 	})
 	if err != nil {
 		return nil, h.mapError(err)
@@ -169,6 +171,7 @@ func domainToProtoStudent(s *domain.Student) *pb.Student {
 		PickupAddress: s.PickupAddress,
 		PhotoUrl:      s.PhotoURL,
 		IsActive:      s.IsActive,
+		CedulaId:      s.CedulaID,
 		CreatedAt:     timestamppb.New(s.CreatedAt),
 		UpdatedAt:     timestamppb.New(s.UpdatedAt),
 	}
@@ -191,6 +194,8 @@ func (h *studentHandler) mapError(err error) error {
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, domain.ErrInvalidStudent):
 		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, domain.ErrDuplicateStudent):
+		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, domain.ErrSchoolNotFound):
 		return status.Error(codes.NotFound, err.Error())
 	default:

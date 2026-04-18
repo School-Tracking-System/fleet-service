@@ -28,6 +28,7 @@ type Student struct {
 	PickupAddress  string
 	PhotoURL       string
 	IsActive       bool
+	CedulaID       string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -46,6 +47,7 @@ type NewStudentParams struct {
 	PickupLocation *Location
 	PickupAddress  string
 	PhotoURL       string
+	CedulaID       string
 }
 
 // NewStudent creates a valid Student instance enforcing business invariants.
@@ -59,6 +61,9 @@ func NewStudent(p NewStudentParams) (*Student, error) {
 	if p.SchoolID == uuid.Nil {
 		return nil, errors.New("school_id is required")
 	}
+	if p.CedulaID == "" {
+		return nil, errors.New("cedula_id is required")
+	}
 
 	now := time.Now().UTC()
 	return &Student{
@@ -71,6 +76,7 @@ func NewStudent(p NewStudentParams) (*Student, error) {
 		PickupAddress:  p.PickupAddress,
 		PhotoURL:       p.PhotoURL,
 		IsActive:       true,
+		CedulaID:       p.CedulaID,
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}, nil
@@ -85,6 +91,7 @@ type StudentPatch struct {
 	PickupAddress  *string
 	PhotoURL       *string
 	IsActive       *bool
+	CedulaID       *string
 }
 
 // Apply merges a StudentPatch into the Student, updating only non-nil fields.
@@ -109,6 +116,9 @@ func (s *Student) Apply(patch StudentPatch) {
 	}
 	if patch.IsActive != nil {
 		s.IsActive = *patch.IsActive
+	}
+	if patch.CedulaID != nil {
+		s.CedulaID = *patch.CedulaID
 	}
 	s.UpdatedAt = time.Now().UTC()
 }

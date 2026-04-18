@@ -25,6 +25,7 @@ func AppModule() fx.Option {
 		fleet.StudentModule,
 		fleet.GuardianModule,
 		fleet.SchoolModule,
+		fleet.SchoolContactModule,
 		// Handlers
 		handlers.Module,
 		handlers.RouteHandlerModule,
