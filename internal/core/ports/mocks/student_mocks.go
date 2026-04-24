@@ -30,6 +30,14 @@ func (m *MockStudentRepository) GetByID(ctx context.Context, id uuid.UUID) (*dom
 	return args.Get(0).(*domain.Student), args.Error(1)
 }
 
+func (m *MockStudentRepository) GetByCedulaID(ctx context.Context, cedulaID string) (*domain.Student, error) {
+	args := m.Called(ctx, cedulaID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Student), args.Error(1)
+}
+
 func (m *MockStudentRepository) List(ctx context.Context, limit, offset int) ([]*domain.Student, int, error) {
 	args := m.Called(ctx, limit, offset)
 	if args.Get(0) == nil {

@@ -12,7 +12,7 @@ import (
 	"github.com/fercho/school-tracking/services/fleet/internal/core/ports/repositories"
 	"github.com/fercho/school-tracking/services/fleet/pkg/env"
 	"github.com/google/uuid"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -25,7 +25,16 @@ type vehicleRepo struct {
 // NewDatabase opens a connection to PostgreSQL and verifies it is reachable.
 // Schema creation and table migrations are handled externally by Flyway.
 func NewDatabase(cfg *env.Config, log *zap.Logger) (*sql.DB, error) {
-	db, err := sql.Open("postgres", cfg.DatabaseURL)
+	dsn := cfg.DatabaseURL
+	if strings.Contains(dsn, "-pooler") && !strings.Contains(dsn, "default_query_exec_mode") {
+		separator := "?"
+		if strings.Contains(dsn, "?") {
+			separator = "&"
+		}
+		dsn += separator + "default_query_exec_mode=exec"
+	}
+
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("error opening db connection: %w", err)
 	}

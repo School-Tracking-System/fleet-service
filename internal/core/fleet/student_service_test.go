@@ -18,6 +18,7 @@ func validRegisterStudentReq() services.RegisterStudentRequest {
 		FirstName: "Ana",
 		LastName:  "García",
 		SchoolID:  uuid.New(),
+		CedulaID:  "1712345678",
 	}
 }
 

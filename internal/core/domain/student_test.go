@@ -20,6 +20,7 @@ func validStudentParams() domain.NewStudentParams {
 			Latitude:  -0.2,
 		},
 		PickupAddress: "Calle de los Olivos 123",
+		CedulaID:      "1712345678",
 	}
 }
 
@@ -59,7 +60,8 @@ func TestNewStudent_Validation(t *testing.T) {
 }
 
 func TestStudent_ApplyPatch(t *testing.T) {
-	s, _ := domain.NewStudent(validStudentParams())
+	s, err := domain.NewStudent(validStudentParams())
+	require.NoError(t, err)
 	newName := "Carlos"
 	newActive := false
 
